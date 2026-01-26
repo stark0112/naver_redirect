@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네이버 쇼핑 크롤러</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        </div>
+        <span class="logo-text">크롤러</span>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-title">Menu</div>
+        <div class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          대시보드
+        </div>
+        <div class="nav-item" data-view="search">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          새 검색
+        </div>
+        <div class="nav-item" data-view="keywords">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+          검색 기록
+        </div>
+        <div class="nav-item" data-view="ranking">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+          순위 하락
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Header -->
+      <div class="header">
+        <div class="greeting">네이버 쇼핑 <span>크롤러</span></div>
+      </div>
+
+      <!-- Dashboard View -->
+      <div id="dashboardView" class="view active">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-label">총 키워드</div>
+            <div class="card-value" id="totalKeywords">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">총 상품</div>
+            <div class="card-value" id="totalProducts">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">전화번호 성공</div>
+            <div class="card-value" id="phoneSuccess">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">전화번호 실패</div>
+            <div class="card-value" id="phoneFailed">0</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>오늘 크롤링</h2>
+          <div class="stat-box">
+            <span id="todayCrawled">0</span>건
+          </div>
+        </div>
+      </div>
+
+      <!-- Search View -->
+      <div id="searchView" class="view">
+        <div class="section">
+          <h2>새 검색</h2>
+          <form id="searchForm" class="search-form">
+            <div class="form-group">
+              <label>검색 키워드</label>
+              <input type="text" id="keyword" placeholder="예: 여성 원피스" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>시작 페이지</label>
+                <input type="number" id="startPage" value="1" min="1" max="10">
+              </div>
+              <div class="form-group">
+                <label>끝 페이지</label>
+                <input type="number" id="endPage" value="1" min="1" max="10">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="crawlPhone" checked>
+                전화번호 크롤링 (백그라운드)
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary" id="searchBtn">
+              검색 시작
+            </button>
+          </form>
+        </div>
+
+        <!-- 검색 결과 -->
+        <div id="searchResult" class="section" style="display: none;">
+          <div class="section-header">
+            <h2>검색 결과 (<span id="resultCount">0</span>건)</h2>
+            <button class="btn btn-secondary" id="exportBtn">엑셀 다운로드</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="resultTable">
+              <thead>
+                <tr>
+                  <th>순위</th>
+                  <th>상품명</th>
+                  <th>스토어</th>
+                  <th>전화번호</th>
+                  <th>가격</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Keywords View -->
+      <div id="keywordsView" class="view">
+        <div class="section">
+          <h2>검색 기록</h2>
+          <div class="table-wrapper">
+            <table class="data-table" id="keywordsTable">
+              <thead>
+                <tr>
+                  <th>키워드</th>
+                  <th>상품 수</th>
+                  <th>검색일</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 키워드 상세 -->
+        <div id="keywordDetail" class="section" style="display: none;">
+          <div class="section-header">
+            <h2 id="detailKeyword">키워드</h2>
+            <button class="btn btn-secondary" id="detailExportBtn">엑셀 다운로드</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="detailTable">
+              <thead>
+                <tr>
+                  <th>순위</th>
+                  <th>변동</th>
+                  <th>상품명</th>
+                  <th>스토어</th>
+                  <th>전화번호</th>
+                  <th>가격</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ranking View -->
+      <div id="rankingView" class="view">
+        <div class="section">
+          <h2>순위 하락 상품 (영업 타겟)</h2>
+          <div class="form-group">
+            <label>키워드 선택</label>
+            <select id="rankingKeyword"></select>
+          </div>
+          <div class="form-group">
+            <label>최소 하락 순위</label>
+            <input type="number" id="minDrop" value="5" min="1">
+          </div>
+          <button class="btn btn-primary" id="findDropsBtn">조회</button>
+        </div>
+
+        <div id="dropsResult" class="section" style="display: none;">
+          <h2>하락 상품 (<span id="dropsCount">0</span>건)</h2>
+          <div class="table-wrapper">
+            <table class="data-table" id="dropsTable">
+              <thead>
+                <tr>
+                  <th>상품명</th>
+                  <th>스토어</th>
+                  <th>전화번호</th>
+                  <th id="timeHeader1">이전</th>
+                  <th id="timeHeader2">직전</th>
+                  <th id="timeHeader3">최신</th>
+                  <th>하락</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <p>처리 중...</p>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

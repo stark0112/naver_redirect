@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>네이버 검색 랜덤 리다이렉트</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        </div>
+        <span class="logo-text">링크 관리</span>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-title">Menu</div>
+        <div class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          대시보드
+        </div>
+        <div class="nav-item" data-view="create">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          새 링크 생성
+        </div>
+        <div class="nav-item" data-view="links">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+          링크 관리
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Header -->
+      <div class="header">
+        <div class="greeting">네이버 검색 <span>랜덤 리다이렉트</span></div>
+      </div>
+
+      <!-- Dashboard View -->
+      <div id="dashboardView" class="view active">
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-label">총 링크</div>
+            <div class="card-value" id="totalLinks">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">총 키워드</div>
+            <div class="card-value" id="totalKeywords">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">총 클릭</div>
+            <div class="card-value" id="totalClicks">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">오늘 클릭</div>
+            <div class="card-value" id="todayClicks">0</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>최근 생성 링크</h2>
+          <div class="table-wrapper">
+            <table class="data-table" id="recentLinksTable">
+              <thead>
+                <tr>
+                  <th>짧은 링크</th>
+                  <th>키워드 수</th>
+                  <th>클릭 수</th>
+                  <th>생성일</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="4" class="no-data">생성된 링크가 없습니다</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create View -->
+      <div id="createView" class="view">
+        <div class="section">
+          <h2>새 랜덤 링크 생성</h2>
+          <form id="createForm" class="search-form">
+            <div class="form-group">
+              <label>상품명/설명 (선택)</label>
+              <input type="text" id="productName" placeholder="예: 청소기 상품">
+            </div>
+
+            <div class="form-group">
+              <label>검색 키워드 조합 입력</label>
+              <div class="keyword-input-wrapper">
+                <div class="keyword-row">
+                  <input type="text" class="query-input" placeholder="Query (검색어)" required>
+                  <input type="text" class="acq-input" placeholder="Acq (자동완성 검색어)" required>
+                  <button type="button" class="btn-remove" onclick="removeKeywordRow(this)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary" id="addKeywordBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; margin-right: 4px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                키워드 추가
+              </button>
+            </div>
+
+            <div class="info-box">
+              <strong>파라미터 자동 설정:</strong><br>
+              • ackey: 영문+숫자 8글자 랜덤 생성<br>
+              • acr: 0~10 사이 랜덤 숫자<br>
+              • qdt: 0 (고정)<br>
+              • 나머지: 기본값 유지
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="createBtn">
+              랜덤 링크 생성
+            </button>
+          </form>
+        </div>
+
+        <!-- 생성 결과 -->
+        <div id="createResult" class="section" style="display: none;">
+          <h2>생성 완료!</h2>
+          <div class="result-box">
+            <div class="result-label">짧은 링크:</div>
+            <div class="result-url" id="resultUrl"></div>
+            <button class="btn btn-secondary" id="copyBtn">복사</button>
+          </div>
+          <div class="keyword-list" id="keywordList"></div>
+        </div>
+      </div>
+
+      <!-- Links View -->
+      <div id="linksView" class="view">
+        <div class="section">
+          <h2>링크 관리</h2>
+          <div class="table-wrapper">
+            <table class="data-table" id="linksTable">
+              <thead>
+                <tr>
+                  <th>짧은 링크</th>
+                  <th>상품명</th>
+                  <th>키워드 수</th>
+                  <th>클릭 수</th>
+                  <th>생성일</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="6" class="no-data">생성된 링크가 없습니다</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 링크 상세 -->
+        <div id="linkDetail" class="section" style="display: none;">
+          <div class="section-header">
+            <h2 id="detailLinkCode">링크 상세</h2>
+            <div>
+              <button class="btn btn-secondary" id="detailCopyBtn">링크 복사</button>
+              <button class="btn btn-danger" id="detailDeleteBtn">삭제</button>
+            </div>
+          </div>
+          <div class="detail-info">
+            <div><strong>전체 URL:</strong> <span id="detailFullUrl"></span></div>
+            <div><strong>클릭 수:</strong> <span id="detailClicks">0</span>회</div>
+            <div><strong>생성일:</strong> <span id="detailCreated"></span></div>
+          </div>
+          <h3>등록된 키워드 (<span id="detailKeywordCount">0</span>개)</h3>
+          <div class="table-wrapper">
+            <table class="data-table" id="detailKeywordsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Query</th>
+                  <th>Acq</th>
+                  <th>미리보기</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <p>처리 중...</p>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
