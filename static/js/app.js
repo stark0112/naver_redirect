@@ -5,6 +5,7 @@ let currentDetailLink = null;
 // ===== NAVIGATION =====
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
+  initMobileMenu();
   initCreateForm();
   loadDashboard();
 });
@@ -19,8 +20,42 @@ function initNavigation() {
       // Update active state
       navItems.forEach(n => n.classList.remove('active'));
       item.classList.add('active');
+
+      // Close mobile menu
+      closeMobileMenu();
     });
   });
+}
+
+function initMobileMenu() {
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+
+  if (!menuBtn) return;
+
+  // Toggle menu
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+  });
+
+  // Close menu when clicking overlay
+  overlay.addEventListener('click', () => {
+    closeMobileMenu();
+  });
+}
+
+function closeMobileMenu() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+  if (sidebar) {
+    sidebar.classList.remove('open');
+  }
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
 }
 
 function switchView(view) {
