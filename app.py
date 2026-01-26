@@ -68,10 +68,9 @@ def redirect_link(code):
 
     save_data(data)
 
-    # Choose random keyword
-    keyword = random.choice(link['keywords'])
-    query = keyword['query']
-    acq = keyword['acq']
+    # Choose random query and acq separately
+    query = random.choice(link['queries'])
+    acq = random.choice(link['acqs'])
 
     # Generate random parameters
     ackey = generate_ackey()
@@ -91,7 +90,7 @@ def get_stats():
     links = data['links']
 
     total_links = len(links)
-    total_keywords = sum(len(link['keywords']) for link in links)
+    total_keywords = sum(len(link.get('queries', [])) + len(link.get('acqs', [])) for link in links)
     total_clicks = sum(link.get('clicks', 0) for link in links)
 
     # Calculate today's clicks
@@ -109,7 +108,7 @@ def get_stats():
     recent_links = sorted(links, key=lambda x: x['createdAt'], reverse=True)[:5]
     recent_links_data = [{
         'code': link['code'],
-        'keywordCount': len(link['keywords']),
+        'keywordCount': len(link.get('queries', [])) + len(link.get('acqs', [])),
         'clicks': link.get('clicks', 0),
         'createdAt': link['createdAt']
     } for link in recent_links]
@@ -130,7 +129,7 @@ def get_links():
     links_data = [{
         'code': link['code'],
         'productName': link.get('productName', ''),
-        'keywordCount': len(link['keywords']),
+        'keywordCount': len(link.get('queries', [])) + len(link.get('acqs', [])),
         'clicks': link.get('clicks', 0),
         'createdAt': link['createdAt']
     } for link in data['links']]
@@ -157,7 +156,9 @@ def get_link(code):
     return jsonify({
         'code': link['code'],
         'productName': link.get('productName', ''),
-        'keywords': link['keywords'],
+        'queries': link.get('queries', []),
+        'acqs': link.get('acqs', []),
+        'keywords': link.get('keywords', []),  # Backward compatibility
         'clicks': link.get('clicks', 0),
         'createdAt': link['createdAt']
     })
@@ -168,10 +169,21 @@ def create_link():
     req_data = request.json
 
     product_name = req_data.get('productName', '')
-    keywords = req_data.get('keywords', [])
+    queries = req_data.get('queries', [])
+    acqs = req_data.get('acqs', [])
+    keywords = req_data.get('keywords', [])  # Backward compatibility
 
-    if not keywords or len(keywords) == 0:
-        return jsonify({'error': 'At least one keyword is required'}), 400
+    # Support both new format (queries/acqs) and old format (keywords)
+    if queries and acqs:
+        # New format
+        if not queries or not acqs:
+            return jsonify({'error': 'At least one query and one acq is required'}), 400
+    elif keywords:
+        # Old format - convert to new format
+        queries = [k['query'] for k in keywords]
+        acqs = [k['acq'] for k in keywords]
+    else:
+        return jsonify({'error': 'At least one query and one acq is required'}), 400
 
     # Generate unique code
     data = load_data()
@@ -185,7 +197,8 @@ def create_link():
     new_link = {
         'code': code,
         'productName': product_name,
-        'keywords': keywords,
+        'queries': queries,
+        'acqs': acqs,
         'clicks': 0,
         'clickHistory': [],
         'createdAt': datetime.now().isoformat()
@@ -197,7 +210,8 @@ def create_link():
     return jsonify({
         'code': code,
         'productName': product_name,
-        'keywords': keywords,
+        'queries': queries,
+        'acqs': acqs,
         'createdAt': new_link['createdAt']
     }), 201
 

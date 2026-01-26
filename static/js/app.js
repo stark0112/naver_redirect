@@ -81,10 +81,12 @@ function switchView(view) {
 // ===== CREATE FORM =====
 function initCreateForm() {
   const form = document.getElementById('createForm');
-  const addKeywordBtn = document.getElementById('addKeywordBtn');
+  const addQueryBtn = document.getElementById('addQueryBtn');
+  const addAcqBtn = document.getElementById('addAcqBtn');
   const copyBtn = document.getElementById('copyBtn');
 
-  addKeywordBtn.addEventListener('click', addKeywordRow);
+  addQueryBtn.addEventListener('click', addQueryRow);
+  addAcqBtn.addEventListener('click', addAcqRow);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -97,44 +99,75 @@ function initCreateForm() {
   });
 }
 
-function addKeywordRow() {
-  const wrapper = document.querySelector('.keyword-input-wrapper');
+function addQueryRow() {
+  const wrapper = document.querySelector('.query-input-wrapper');
   const newRow = document.createElement('div');
-  newRow.className = 'keyword-row';
+  newRow.className = 'single-input-row';
   newRow.innerHTML = `
-    <input type="text" class="query-input" placeholder="Query (검색어)" required>
-    <input type="text" class="acq-input" placeholder="Acq (자동완성 검색어)" required>
-    <button type="button" class="btn-remove" onclick="removeKeywordRow(this)">
+    <input type="text" class="query-input" placeholder="예: 청소기 추천" required>
+    <button type="button" class="btn-remove-single" onclick="removeQueryRow(this)">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
     </button>
   `;
   wrapper.appendChild(newRow);
 }
 
-function removeKeywordRow(button) {
-  const rows = document.querySelectorAll('.keyword-row');
+function addAcqRow() {
+  const wrapper = document.querySelector('.acq-input-wrapper');
+  const newRow = document.createElement('div');
+  newRow.className = 'single-input-row';
+  newRow.innerHTML = `
+    <input type="text" class="acq-input" placeholder="예: 청소기 인기" required>
+    <button type="button" class="btn-remove-single" onclick="removeAcqRow(this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+  `;
+  wrapper.appendChild(newRow);
+}
+
+function removeQueryRow(button) {
+  const rows = document.querySelectorAll('.query-input-wrapper .single-input-row');
   if (rows.length > 1) {
-    button.closest('.keyword-row').remove();
+    button.closest('.single-input-row').remove();
   } else {
-    showToast('최소 1개의 키워드가 필요합니다', 'error');
+    showToast('최소 1개의 Query가 필요합니다', 'error');
+  }
+}
+
+function removeAcqRow(button) {
+  const rows = document.querySelectorAll('.acq-input-wrapper .single-input-row');
+  if (rows.length > 1) {
+    button.closest('.single-input-row').remove();
+  } else {
+    showToast('최소 1개의 Acq가 필요합니다', 'error');
   }
 }
 
 async function createLink() {
   const productName = document.getElementById('productName').value.trim();
-  const keywordRows = document.querySelectorAll('.keyword-row');
 
-  const keywords = [];
-  keywordRows.forEach(row => {
-    const query = row.querySelector('.query-input').value.trim();
-    const acq = row.querySelector('.acq-input').value.trim();
-    if (query && acq) {
-      keywords.push({ query, acq });
+  // Collect all queries
+  const queryInputs = document.querySelectorAll('.query-input-wrapper .query-input');
+  const queries = [];
+  queryInputs.forEach(input => {
+    const value = input.value.trim();
+    if (value) {
+      queries.push(value);
     }
   });
 
-  if (keywords.length === 0) {
-    showToast('최소 1개의 키워드를 입력해주세요', 'error');
+  // Collect all acqs
+  const acqInputs = document.querySelectorAll('.acq-input-wrapper .acq-input');
+  const acqs = [];
+  acqInputs.forEach(input => {
+    const value = input.value.trim();
+    if (value) {
+      acqs.push(value);
+    }
+  });
+
+  if (queries.length === 0 || acqs.length === 0) {
+    showToast('Query와 Acq를 각각 최소 1개씩 입력해주세요', 'error');
     return;
   }
 
@@ -144,7 +177,7 @@ async function createLink() {
     const response = await fetch('/api/links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ productName, keywords })
+      body: JSON.stringify({ productName, queries, acqs })
     });
 
     const data = await response.json();
@@ -155,7 +188,10 @@ async function createLink() {
 
       // Reset form
       document.getElementById('createForm').reset();
-      document.querySelectorAll('.keyword-row').forEach((row, index) => {
+      document.querySelectorAll('.query-input-wrapper .single-input-row').forEach((row, index) => {
+        if (index > 0) row.remove();
+      });
+      document.querySelectorAll('.acq-input-wrapper .single-input-row').forEach((row, index) => {
         if (index > 0) row.remove();
       });
     } else {
@@ -177,9 +213,13 @@ function showCreateResult(data) {
   const fullUrl = `${window.location.origin}/r/${data.code}`;
   resultUrl.textContent = fullUrl;
 
-  keywordList.innerHTML = data.keywords.map((k, i) =>
-    `<div><strong>${i + 1}.</strong> Query: "${k.query}" / Acq: "${k.acq}"</div>`
-  ).join('');
+  let html = '<div style="margin-bottom:12px;"><strong>Query 목록:</strong></div>';
+  html += data.queries.map((q, i) => `<div>${i + 1}. ${q}</div>`).join('');
+  html += '<div style="margin-top:16px;margin-bottom:12px;"><strong>Acq 목록:</strong></div>';
+  html += data.acqs.map((a, i) => `<div>${i + 1}. ${a}</div>`).join('');
+  html += '<div style="margin-top:16px;color:#666;font-size:13px;">💡 각 클릭마다 Query와 Acq가 랜덤 조합됩니다!</div>';
+
+  keywordList.innerHTML = html;
 
   resultSection.style.display = 'block';
   resultSection.scrollIntoView({ behavior: 'smooth' });
@@ -278,17 +318,47 @@ function showLinkDetail(link) {
   document.getElementById('detailFullUrl').textContent = fullUrl;
   document.getElementById('detailClicks').textContent = link.clicks;
   document.getElementById('detailCreated').textContent = formatDate(link.createdAt);
-  document.getElementById('detailKeywordCount').textContent = link.keywords.length;
+
+  // Support both old format (keywords) and new format (queries/acqs)
+  const queries = link.queries || [];
+  const acqs = link.acqs || [];
+  const keywordCount = queries.length + acqs.length;
+
+  document.getElementById('detailKeywordCount').textContent = keywordCount;
 
   const tbody = document.querySelector('#detailKeywordsTable tbody');
-  tbody.innerHTML = link.keywords.map((k, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${k.query}</td>
-      <td>${k.acq}</td>
-      <td><a href="#" class="preview-btn" onclick="previewUrl('${k.query}', '${k.acq}'); return false;">미리보기</a></td>
-    </tr>
-  `).join('');
+
+  if (queries.length > 0 && acqs.length > 0) {
+    // New format - show queries and acqs separately
+    let html = '<tr><td colspan="4" style="background:#f0f9ff;font-weight:600;color:#1e40af;">Query 목록</td></tr>';
+    html += queries.map((q, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td colspan="3">${q}</td>
+      </tr>
+    `).join('');
+    html += '<tr><td colspan="4" style="background:#f0f9ff;font-weight:600;color:#1e40af;">Acq 목록</td></tr>';
+    html += acqs.map((a, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td colspan="3">${a}</td>
+      </tr>
+    `).join('');
+    html += '<tr><td colspan="4" style="color:#666;font-size:12px;text-align:center;">💡 각 클릭마다 Query와 Acq가 랜덤 조합됩니다</td></tr>';
+    tbody.innerHTML = html;
+  } else if (link.keywords && link.keywords.length > 0) {
+    // Old format - show keyword pairs
+    tbody.innerHTML = link.keywords.map((k, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${k.query}</td>
+        <td>${k.acq}</td>
+        <td><a href="#" class="preview-btn" onclick="previewUrl('${k.query}', '${k.acq}'); return false;">미리보기</a></td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="4" class="no-data">키워드가 없습니다</td></tr>';
+  }
 
   // Setup buttons
   document.getElementById('detailCopyBtn').onclick = () => copyToClipboard(fullUrl);

@@ -106,28 +106,44 @@
             </div>
 
             <div class="form-group">
-              <label>검색 키워드 조합 입력</label>
-              <div class="keyword-input-wrapper">
-                <div class="keyword-row">
-                  <input type="text" class="query-input" placeholder="Query (검색어)" required>
-                  <input type="text" class="acq-input" placeholder="Acq (자동완성 검색어)" required>
-                  <button type="button" class="btn-remove" onclick="removeKeywordRow(this)">
+              <label>Query (검색어) 입력</label>
+              <div class="query-input-wrapper">
+                <div class="single-input-row">
+                  <input type="text" class="query-input" placeholder="예: 청소기 추천" required>
+                  <button type="button" class="btn-remove-single" onclick="removeQueryRow(this)">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                   </button>
                 </div>
               </div>
-              <button type="button" class="btn btn-secondary" id="addKeywordBtn">
+              <button type="button" class="btn btn-secondary" id="addQueryBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; margin-right: 4px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                키워드 추가
+                Query 추가
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label>Acq (자동완성 검색어) 입력</label>
+              <div class="acq-input-wrapper">
+                <div class="single-input-row">
+                  <input type="text" class="acq-input" placeholder="예: 청소기 인기" required>
+                  <button type="button" class="btn-remove-single" onclick="removeAcqRow(this)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary" id="addAcqBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; margin-right: 4px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                Acq 추가
               </button>
             </div>
 
             <div class="info-box">
-              <strong>파라미터 자동 설정:</strong><br>
+              <strong>랜덤 조합 방식:</strong><br>
+              • Query 리스트와 Acq 리스트에서 각각 랜덤 선택<br>
+              • 링크 클릭 시마다 다른 조합으로 검색<br>
               • ackey: 영문+숫자 8글자 랜덤 생성<br>
               • acr: 0~10 사이 랜덤 숫자<br>
-              • qdt: 0 (고정)<br>
-              • 나머지: 기본값 유지
+              • qdt: 0 (고정)
             </div>
 
             <button type="submit" class="btn btn-primary" id="createBtn">

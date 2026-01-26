@@ -282,18 +282,22 @@ body {
 }
 
 /* ===== KEYWORD INPUT ===== */
-.keyword-input-wrapper {
+.keyword-input-wrapper,
+.query-input-wrapper,
+.acq-input-wrapper {
   margin-bottom: 12px;
 }
 
-.keyword-row {
+.keyword-row,
+.single-input-row {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
   align-items: center;
 }
 
-.keyword-row input {
+.keyword-row input,
+.single-input-row input {
   flex: 1;
   padding: 10px 14px;
   border: 2px solid #e0e0e0;
@@ -302,7 +306,8 @@ body {
   transition: border-color 0.2s;
 }
 
-.keyword-row input:focus {
+.keyword-row input:focus,
+.single-input-row input:focus {
   outline: none;
   border-color: #000;
 }
@@ -315,7 +320,8 @@ body {
   flex: 1.2;
 }
 
-.btn-remove {
+.btn-remove,
+.btn-remove-single {
   width: 36px;
   height: 36px;
   background: #ff4444;
@@ -330,11 +336,13 @@ body {
   flex-shrink: 0;
 }
 
-.btn-remove:hover {
+.btn-remove:hover,
+.btn-remove-single:hover {
   background: #cc0000;
 }
 
-.btn-remove svg {
+.btn-remove svg,
+.btn-remove-single svg {
   width: 18px;
   height: 18px;
 }
@@ -697,19 +705,22 @@ body {
     font-size: 14px;
   }
 
-  .keyword-row {
+  .keyword-row,
+  .single-input-row {
     flex-direction: column;
     gap: 8px;
     margin-bottom: 10px;
   }
 
-  .keyword-row input {
+  .keyword-row input,
+  .single-input-row input {
     width: 100%;
     padding: 10px 12px;
     font-size: 14px;
   }
 
-  .btn-remove {
+  .btn-remove,
+  .btn-remove-single {
     width: 100%;
     height: 40px;
   }
