@@ -230,6 +230,188 @@ def delete_link(code):
     save_data(data)
     return jsonify({'message': 'Link deleted'}), 200
 
+@app.route('/api/links/<code>/queries', methods=['POST'])
+def add_query(code):
+    """Add a query to a link"""
+    data = load_data()
+    req_data = request.json
+
+    query = req_data.get('query', '').strip()
+    if not query:
+        return jsonify({'error': 'Query is required'}), 400
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Add query
+    if 'queries' not in link:
+        link['queries'] = []
+    link['queries'].append(query)
+
+    save_data(data)
+    return jsonify({'message': 'Query added', 'queries': link['queries']}), 200
+
+@app.route('/api/links/<code>/queries/<int:index>', methods=['DELETE'])
+def delete_query(code, index):
+    """Delete a query from a link"""
+    data = load_data()
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Check if index is valid
+    queries = link.get('queries', [])
+    if index < 0 or index >= len(queries):
+        return jsonify({'error': 'Invalid index'}), 400
+
+    # Prevent deleting last query
+    if len(queries) <= 1:
+        return jsonify({'error': 'Cannot delete last query'}), 400
+
+    # Delete query
+    queries.pop(index)
+    link['queries'] = queries
+
+    save_data(data)
+    return jsonify({'message': 'Query deleted', 'queries': link['queries']}), 200
+
+@app.route('/api/links/<code>/queries/<int:index>', methods=['PUT'])
+def update_query(code, index):
+    """Update a query in a link"""
+    data = load_data()
+    req_data = request.json
+
+    new_query = req_data.get('query', '').strip()
+    if not new_query:
+        return jsonify({'error': 'Query is required'}), 400
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Check if index is valid
+    queries = link.get('queries', [])
+    if index < 0 or index >= len(queries):
+        return jsonify({'error': 'Invalid index'}), 400
+
+    # Update query
+    queries[index] = new_query
+    link['queries'] = queries
+
+    save_data(data)
+    return jsonify({'message': 'Query updated', 'queries': link['queries']}), 200
+
+@app.route('/api/links/<code>/acqs', methods=['POST'])
+def add_acq(code):
+    """Add an acq to a link"""
+    data = load_data()
+    req_data = request.json
+
+    acq = req_data.get('acq', '').strip()
+    if not acq:
+        return jsonify({'error': 'Acq is required'}), 400
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Add acq
+    if 'acqs' not in link:
+        link['acqs'] = []
+    link['acqs'].append(acq)
+
+    save_data(data)
+    return jsonify({'message': 'Acq added', 'acqs': link['acqs']}), 200
+
+@app.route('/api/links/<code>/acqs/<int:index>', methods=['DELETE'])
+def delete_acq(code, index):
+    """Delete an acq from a link"""
+    data = load_data()
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Check if index is valid
+    acqs = link.get('acqs', [])
+    if index < 0 or index >= len(acqs):
+        return jsonify({'error': 'Invalid index'}), 400
+
+    # Prevent deleting last acq
+    if len(acqs) <= 1:
+        return jsonify({'error': 'Cannot delete last acq'}), 400
+
+    # Delete acq
+    acqs.pop(index)
+    link['acqs'] = acqs
+
+    save_data(data)
+    return jsonify({'message': 'Acq deleted', 'acqs': link['acqs']}), 200
+
+@app.route('/api/links/<code>/acqs/<int:index>', methods=['PUT'])
+def update_acq(code, index):
+    """Update an acq in a link"""
+    data = load_data()
+    req_data = request.json
+
+    new_acq = req_data.get('acq', '').strip()
+    if not new_acq:
+        return jsonify({'error': 'Acq is required'}), 400
+
+    # Find link
+    link = None
+    for l in data['links']:
+        if l['code'] == code:
+            link = l
+            break
+
+    if not link:
+        return jsonify({'error': 'Link not found'}), 404
+
+    # Check if index is valid
+    acqs = link.get('acqs', [])
+    if index < 0 or index >= len(acqs):
+        return jsonify({'error': 'Invalid index'}), 400
+
+    # Update acq
+    acqs[index] = new_acq
+    link['acqs'] = acqs
+
+    save_data(data)
+    return jsonify({'message': 'Acq updated', 'acqs': link['acqs']}), 200
+
 # ===== INITIALIZATION =====
 # Initialize data on startup
 init_data()

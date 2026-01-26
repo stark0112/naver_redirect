@@ -1,6 +1,8 @@
 // ===== GLOBAL STATE =====
 let currentView = 'dashboard';
 let currentDetailLink = null;
+let isEditMode = false;
+let editingLinkData = null;
 
 // ===== NAVIGATION =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -314,6 +316,9 @@ function showLinkDetail(link) {
   const detailSection = document.getElementById('linkDetail');
   const fullUrl = `${window.location.origin}/r/${link.code}`;
 
+  editingLinkData = link;
+  isEditMode = false;
+
   document.getElementById('detailLinkCode').textContent = `링크: ${link.code}`;
   document.getElementById('detailFullUrl').textContent = fullUrl;
   document.getElementById('detailClicks').textContent = link.clicks;
@@ -326,24 +331,113 @@ function showLinkDetail(link) {
 
   document.getElementById('detailKeywordCount').textContent = keywordCount;
 
+  renderKeywordList(link);
+
+  // Setup buttons
+  document.getElementById('detailCopyBtn').onclick = () => copyToClipboard(fullUrl);
+  document.getElementById('detailEditBtn').onclick = () => toggleEditMode();
+  document.getElementById('detailDeleteBtn').onclick = () => deleteLink(link.code);
+
+  detailSection.style.display = 'block';
+  detailSection.scrollIntoView({ behavior: 'smooth' });
+
+  // Switch to links view if not already there
+  if (currentView !== 'links') {
+    switchView('links');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('[data-view="links"]').classList.add('active');
+  }
+}
+
+function renderKeywordList(link) {
   const tbody = document.querySelector('#detailKeywordsTable tbody');
+  const queries = link.queries || [];
+  const acqs = link.acqs || [];
 
   if (queries.length > 0 && acqs.length > 0) {
     // New format - show queries and acqs separately
     let html = '<tr><td colspan="4" style="background:#f0f9ff;font-weight:600;color:#1e40af;">Query 목록</td></tr>';
-    html += queries.map((q, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td colspan="3">${q}</td>
-      </tr>
-    `).join('');
+
+    queries.forEach((q, i) => {
+      if (isEditMode) {
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td colspan="2">
+              <input type="text" class="edit-input" id="query-${i}" value="${q}" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;">
+            </td>
+            <td style="text-align:center;">
+              <button class="btn-edit-action" onclick="updateQuery(${i})" title="저장">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </button>
+              <button class="btn-edit-action delete" onclick="deleteQueryItem(${i})" title="삭제">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      } else {
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td colspan="3">${q}</td>
+          </tr>
+        `;
+      }
+    });
+
+    if (isEditMode) {
+      html += `
+        <tr>
+          <td></td>
+          <td colspan="3">
+            <button class="btn btn-secondary btn-sm" onclick="showAddQueryInput()" style="width:100%;">+ Query 추가</button>
+          </td>
+        </tr>
+      `;
+    }
+
     html += '<tr><td colspan="4" style="background:#f0f9ff;font-weight:600;color:#1e40af;">Acq 목록</td></tr>';
-    html += acqs.map((a, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td colspan="3">${a}</td>
-      </tr>
-    `).join('');
+
+    acqs.forEach((a, i) => {
+      if (isEditMode) {
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td colspan="2">
+              <input type="text" class="edit-input" id="acq-${i}" value="${a}" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;">
+            </td>
+            <td style="text-align:center;">
+              <button class="btn-edit-action" onclick="updateAcq(${i})" title="저장">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </button>
+              <button class="btn-edit-action delete" onclick="deleteAcqItem(${i})" title="삭제">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      } else {
+        html += `
+          <tr>
+            <td>${i + 1}</td>
+            <td colspan="3">${a}</td>
+          </tr>
+        `;
+      }
+    });
+
+    if (isEditMode) {
+      html += `
+        <tr>
+          <td></td>
+          <td colspan="3">
+            <button class="btn btn-secondary btn-sm" onclick="showAddAcqInput()" style="width:100%;">+ Acq 추가</button>
+          </td>
+        </tr>
+      `;
+    }
+
     html += '<tr><td colspan="4" style="color:#666;font-size:12px;text-align:center;">💡 각 클릭마다 Query와 Acq가 랜덤 조합됩니다</td></tr>';
     tbody.innerHTML = html;
   } else if (link.keywords && link.keywords.length > 0) {
@@ -359,19 +453,205 @@ function showLinkDetail(link) {
   } else {
     tbody.innerHTML = '<tr><td colspan="4" class="no-data">키워드가 없습니다</td></tr>';
   }
+}
 
-  // Setup buttons
-  document.getElementById('detailCopyBtn').onclick = () => copyToClipboard(fullUrl);
-  document.getElementById('detailDeleteBtn').onclick = () => deleteLink(link.code);
+function toggleEditMode() {
+  isEditMode = !isEditMode;
+  const editBtn = document.getElementById('detailEditBtn');
+  editBtn.textContent = isEditMode ? '편집 완료' : '편집';
+  editBtn.className = isEditMode ? 'btn btn-primary' : 'btn btn-secondary';
+  renderKeywordList(editingLinkData);
+}
 
-  detailSection.style.display = 'block';
-  detailSection.scrollIntoView({ behavior: 'smooth' });
+async function updateQuery(index) {
+  const input = document.getElementById(`query-${index}`);
+  const newValue = input.value.trim();
 
-  // Switch to links view if not already there
-  if (currentView !== 'links') {
-    switchView('links');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelector('[data-view="links"]').classList.add('active');
+  if (!newValue) {
+    showToast('Query를 입력해주세요', 'error');
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/queries/${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: newValue })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Query가 수정되었습니다', 'success');
+      editingLinkData.queries = data.queries;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '수정 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function deleteQueryItem(index) {
+  if (!confirm('이 Query를 삭제하시겠습니까?')) {
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/queries/${index}`, {
+      method: 'DELETE'
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Query가 삭제되었습니다', 'success');
+      editingLinkData.queries = data.queries;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '삭제 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function showAddQueryInput() {
+  const query = prompt('새 Query를 입력하세요:');
+  if (!query || !query.trim()) {
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/queries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query.trim() })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Query가 추가되었습니다', 'success');
+      editingLinkData.queries = data.queries;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '추가 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function updateAcq(index) {
+  const input = document.getElementById(`acq-${index}`);
+  const newValue = input.value.trim();
+
+  if (!newValue) {
+    showToast('Acq를 입력해주세요', 'error');
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/acqs/${index}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acq: newValue })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Acq가 수정되었습니다', 'success');
+      editingLinkData.acqs = data.acqs;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '수정 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function deleteAcqItem(index) {
+  if (!confirm('이 Acq를 삭제하시겠습니까?')) {
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/acqs/${index}`, {
+      method: 'DELETE'
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Acq가 삭제되었습니다', 'success');
+      editingLinkData.acqs = data.acqs;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '삭제 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function showAddAcqInput() {
+  const acq = prompt('새 Acq를 입력하세요:');
+  if (!acq || !acq.trim()) {
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    const response = await fetch(`/api/links/${currentDetailLink}/acqs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acq: acq.trim() })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast('Acq가 추가되었습니다', 'success');
+      editingLinkData.acqs = data.acqs;
+      renderKeywordList(editingLinkData);
+    } else {
+      showToast(data.error || '추가 실패', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showToast('오류가 발생했습니다', 'error');
+  } finally {
+    showLoading(false);
   }
 }
 

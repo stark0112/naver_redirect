@@ -836,3 +836,44 @@ body {
     font-size: 11px;
   }
 }
+
+/* ===== EDIT MODE BUTTONS ===== */
+.btn-edit-action {
+  background: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px 10px;
+  color: #fff;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+}
+
+.btn-edit-action:hover {
+  background: #333;
+}
+
+.btn-edit-action.delete {
+  background: #ff4444;
+}
+
+.btn-edit-action.delete:hover {
+  background: #cc0000;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #000;
+}
