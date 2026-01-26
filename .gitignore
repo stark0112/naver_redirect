@@ -44,3 +44,7 @@ data.json
 # OS
 .DS_Store
 Thumbs.db
+.vercel
+
+# Exclude naver-shopping-crawler
+naver-shopping-crawler/
