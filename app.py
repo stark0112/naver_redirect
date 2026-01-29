@@ -1,29 +1,10 @@
 from flask import Flask, render_template, jsonify, request, redirect
-import json
-import os
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime
+import db
 
 app = Flask(__name__)
-
-# Data file path
-DATA_FILE = 'data.json'
-
-# Initialize data file if not exists
-def init_data():
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump({'links': []}, f, ensure_ascii=False, indent=2)
-
-def load_data():
-    init_data()
-    with open(DATA_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def generate_code(length=11):
     """Generate random alphanumeric code"""
@@ -45,28 +26,13 @@ def index():
 @app.route('/r/<code>')
 def redirect_link(code):
     """Redirect to random Naver search URL"""
-    data = load_data()
-
-    # Find link by code
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    link = db.get_link_by_code(code)
 
     if not link:
         return "Link not found", 404
 
     # Increment click count
-    link['clicks'] = link.get('clicks', 0) + 1
-
-    # Add click timestamp
-    now = datetime.now().isoformat()
-    if 'clickHistory' not in link:
-        link['clickHistory'] = []
-    link['clickHistory'].append(now)
-
-    save_data(data)
+    db.increment_click(code)
 
     # Choose random query and acq separately
     query = random.choice(link['queries'])
@@ -86,81 +52,55 @@ def redirect_link(code):
 @app.route('/api/stats')
 def get_stats():
     """Get dashboard statistics"""
-    data = load_data()
-    links = data['links']
+    stats = db.get_stats()
 
-    total_links = len(links)
-    total_keywords = sum(len(link.get('queries', [])) + len(link.get('acqs', [])) for link in links)
-    total_clicks = sum(link.get('clicks', 0) for link in links)
-
-    # Calculate today's clicks
-    today = datetime.now().date()
-    today_clicks = 0
-
-    for link in links:
-        if 'clickHistory' in link:
-            for click_time in link['clickHistory']:
-                click_date = datetime.fromisoformat(click_time).date()
-                if click_date == today:
-                    today_clicks += 1
-
-    # Get recent links (top 5)
-    recent_links = sorted(links, key=lambda x: x['createdAt'], reverse=True)[:5]
+    # Format recent links
     recent_links_data = [{
         'code': link['code'],
-        'keywordCount': len(link.get('queries', [])) + len(link.get('acqs', [])),
-        'clicks': link.get('clicks', 0),
-        'createdAt': link['createdAt']
-    } for link in recent_links]
+        'keywordCount': link['keyword_count'],
+        'clicks': link['clicks'],
+        'createdAt': link['created_at'].isoformat()
+    } for link in stats['recentLinks']]
 
     return jsonify({
-        'totalLinks': total_links,
-        'totalKeywords': total_keywords,
-        'totalClicks': total_clicks,
-        'todayClicks': today_clicks,
+        'totalLinks': stats['totalLinks'],
+        'totalKeywords': stats['totalKeywords'],
+        'totalClicks': stats['totalClicks'],
+        'todayClicks': stats['todayClicks'],
         'recentLinks': recent_links_data
     })
 
 @app.route('/api/links', methods=['GET'])
 def get_links():
     """Get all links"""
-    data = load_data()
+    links = db.get_all_links()
 
     links_data = [{
         'code': link['code'],
-        'productName': link.get('productName', ''),
+        'productName': link.get('product_name', ''),
         'keywordCount': len(link.get('queries', [])) + len(link.get('acqs', [])),
         'clicks': link.get('clicks', 0),
-        'createdAt': link['createdAt']
-    } for link in data['links']]
-
-    # Sort by creation date (newest first)
-    links_data.sort(key=lambda x: x['createdAt'], reverse=True)
+        'createdAt': link['created_at'].isoformat()
+    } for link in links]
 
     return jsonify({'links': links_data})
 
 @app.route('/api/links/<code>', methods=['GET'])
 def get_link(code):
     """Get specific link details"""
-    data = load_data()
-
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    link = db.get_link_by_code(code)
 
     if not link:
         return jsonify({'error': 'Link not found'}), 404
 
     return jsonify({
         'code': link['code'],
-        'productName': link.get('productName', ''),
+        'productName': link.get('product_name', ''),
         'queries': link.get('queries', []),
         'acqs': link.get('acqs', []),
-        'keywords': link.get('keywords', []),  # Backward compatibility
+        'keywords': [],  # Backward compatibility
         'clicks': link.get('clicks', 0),
-        'createdAt': link['createdAt']
+        'createdAt': link['created_at'].isoformat()
     })
 
 @app.route('/api/links', methods=['POST'])
@@ -186,94 +126,60 @@ def create_link():
         return jsonify({'error': 'At least one query and one acq is required'}), 400
 
     # Generate unique code
-    data = load_data()
-    existing_codes = {link['code'] for link in data['links']}
+    all_links = db.get_all_links()
+    existing_codes = {link['code'] for link in all_links}
 
     code = generate_code()
     while code in existing_codes:
         code = generate_code()
 
     # Create new link
-    new_link = {
-        'code': code,
-        'productName': product_name,
-        'queries': queries,
-        'acqs': acqs,
-        'clicks': 0,
-        'clickHistory': [],
-        'createdAt': datetime.now().isoformat()
-    }
-
-    data['links'].append(new_link)
-    save_data(data)
+    new_link = db.create_link(code, product_name, queries, acqs)
 
     return jsonify({
-        'code': code,
-        'productName': product_name,
-        'queries': queries,
-        'acqs': acqs,
-        'createdAt': new_link['createdAt']
+        'code': new_link['code'],
+        'productName': new_link['product_name'],
+        'queries': new_link['queries'],
+        'acqs': new_link['acqs'],
+        'createdAt': new_link['created_at'].isoformat()
     }), 201
 
 @app.route('/api/links/<code>', methods=['DELETE'])
 def delete_link(code):
     """Delete a link"""
-    data = load_data()
+    deleted = db.delete_link(code)
 
-    # Find and remove link
-    original_length = len(data['links'])
-    data['links'] = [l for l in data['links'] if l['code'] != code]
-
-    if len(data['links']) == original_length:
+    if not deleted:
         return jsonify({'error': 'Link not found'}), 404
 
-    save_data(data)
     return jsonify({'message': 'Link deleted'}), 200
 
 @app.route('/api/links/<code>/queries', methods=['POST'])
 def add_query(code):
     """Add a query to a link"""
-    data = load_data()
     req_data = request.json
 
     query = req_data.get('query', '').strip()
     if not query:
         return jsonify({'error': 'Query is required'}), 400
 
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Add query
+    queries = db.add_query(code, query)
 
-    if not link:
+    if queries is None:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Add query
-    if 'queries' not in link:
-        link['queries'] = []
-    link['queries'].append(query)
-
-    save_data(data)
-    return jsonify({'message': 'Query added', 'queries': link['queries']}), 200
+    return jsonify({'message': 'Query added', 'queries': queries}), 200
 
 @app.route('/api/links/<code>/queries/<int:index>', methods=['DELETE'])
 def delete_query(code, index):
     """Delete a query from a link"""
-    data = load_data()
-
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Get current link to check constraints
+    link = db.get_link_by_code(code)
 
     if not link:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Check if index is valid
     queries = link.get('queries', [])
     if index < 0 or index >= len(queries):
         return jsonify({'error': 'Invalid index'}), 400
@@ -283,88 +189,66 @@ def delete_query(code, index):
         return jsonify({'error': 'Cannot delete last query'}), 400
 
     # Delete query
-    queries.pop(index)
-    link['queries'] = queries
+    updated_queries = db.delete_query(code, index)
 
-    save_data(data)
-    return jsonify({'message': 'Query deleted', 'queries': link['queries']}), 200
+    if updated_queries is None:
+        return jsonify({'error': 'Failed to delete query'}), 500
+
+    return jsonify({'message': 'Query deleted', 'queries': updated_queries}), 200
 
 @app.route('/api/links/<code>/queries/<int:index>', methods=['PUT'])
 def update_query(code, index):
     """Update a query in a link"""
-    data = load_data()
     req_data = request.json
 
     new_query = req_data.get('query', '').strip()
     if not new_query:
         return jsonify({'error': 'Query is required'}), 400
 
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Get current link to check constraints
+    link = db.get_link_by_code(code)
 
     if not link:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Check if index is valid
     queries = link.get('queries', [])
     if index < 0 or index >= len(queries):
         return jsonify({'error': 'Invalid index'}), 400
 
     # Update query
-    queries[index] = new_query
-    link['queries'] = queries
+    updated_queries = db.update_query(code, index, new_query)
 
-    save_data(data)
-    return jsonify({'message': 'Query updated', 'queries': link['queries']}), 200
+    if updated_queries is None:
+        return jsonify({'error': 'Failed to update query'}), 500
+
+    return jsonify({'message': 'Query updated', 'queries': updated_queries}), 200
 
 @app.route('/api/links/<code>/acqs', methods=['POST'])
 def add_acq(code):
     """Add an acq to a link"""
-    data = load_data()
     req_data = request.json
 
     acq = req_data.get('acq', '').strip()
     if not acq:
         return jsonify({'error': 'Acq is required'}), 400
 
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Add acq
+    acqs = db.add_acq(code, acq)
 
-    if not link:
+    if acqs is None:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Add acq
-    if 'acqs' not in link:
-        link['acqs'] = []
-    link['acqs'].append(acq)
-
-    save_data(data)
-    return jsonify({'message': 'Acq added', 'acqs': link['acqs']}), 200
+    return jsonify({'message': 'Acq added', 'acqs': acqs}), 200
 
 @app.route('/api/links/<code>/acqs/<int:index>', methods=['DELETE'])
 def delete_acq(code, index):
     """Delete an acq from a link"""
-    data = load_data()
-
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Get current link to check constraints
+    link = db.get_link_by_code(code)
 
     if not link:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Check if index is valid
     acqs = link.get('acqs', [])
     if index < 0 or index >= len(acqs):
         return jsonify({'error': 'Invalid index'}), 400
@@ -374,47 +258,47 @@ def delete_acq(code, index):
         return jsonify({'error': 'Cannot delete last acq'}), 400
 
     # Delete acq
-    acqs.pop(index)
-    link['acqs'] = acqs
+    updated_acqs = db.delete_acq(code, index)
 
-    save_data(data)
-    return jsonify({'message': 'Acq deleted', 'acqs': link['acqs']}), 200
+    if updated_acqs is None:
+        return jsonify({'error': 'Failed to delete acq'}), 500
+
+    return jsonify({'message': 'Acq deleted', 'acqs': updated_acqs}), 200
 
 @app.route('/api/links/<code>/acqs/<int:index>', methods=['PUT'])
 def update_acq(code, index):
     """Update an acq in a link"""
-    data = load_data()
     req_data = request.json
 
     new_acq = req_data.get('acq', '').strip()
     if not new_acq:
         return jsonify({'error': 'Acq is required'}), 400
 
-    # Find link
-    link = None
-    for l in data['links']:
-        if l['code'] == code:
-            link = l
-            break
+    # Get current link to check constraints
+    link = db.get_link_by_code(code)
 
     if not link:
         return jsonify({'error': 'Link not found'}), 404
 
-    # Check if index is valid
     acqs = link.get('acqs', [])
     if index < 0 or index >= len(acqs):
         return jsonify({'error': 'Invalid index'}), 400
 
     # Update acq
-    acqs[index] = new_acq
-    link['acqs'] = acqs
+    updated_acqs = db.update_acq(code, index, new_acq)
 
-    save_data(data)
-    return jsonify({'message': 'Acq updated', 'acqs': link['acqs']}), 200
+    if updated_acqs is None:
+        return jsonify({'error': 'Failed to update acq'}), 500
+
+    return jsonify({'message': 'Acq updated', 'acqs': updated_acqs}), 200
 
 # ===== INITIALIZATION =====
-# Initialize data on startup
-init_data()
+# Initialize database on startup
+try:
+    db.init_db()
+except Exception as e:
+    print(f"Warning: Could not initialize database: {e}")
+    print("Make sure DATABASE_URL environment variable is set")
 
 # ===== RUN =====
 if __name__ == '__main__':
